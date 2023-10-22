@@ -126,7 +126,7 @@ int Hooks::initSourceHooks()
 
 	LPVOID Weapon_ShootPositionAddr = (LPVOID)(m_Game->m_Offsets->Weapon_ShootPosition.address);
 	hkWeapon_ShootPosition.createHook(Weapon_ShootPositionAddr, &dWeapon_ShootPosition);
-	
+
 	LPVOID TraceFirePortalAddr = (LPVOID)(m_Game->m_Offsets->TraceFirePortalServer.address);
 	hkTraceFirePortal.createHook(TraceFirePortalAddr, &dTraceFirePortal);
 
@@ -134,7 +134,7 @@ int Hooks::initSourceHooks()
 
 	LPVOID DrawSelfAddr = (LPVOID)(m_Game->m_Offsets->DrawSelf.address);
 	hkDrawSelf.createHook(DrawSelfAddr, &dDrawSelf);
-	
+
 	LPVOID ClipTransformAddr = (LPVOID)(m_Game->m_Offsets->ClipTransform.address);
 	hkClipTransform.createHook(ClipTransformAddr, &dClipTransform);
 
@@ -162,7 +162,7 @@ int Hooks::initSourceHooks()
 	hkGetDefaultFOV.createHook((LPVOID)(m_Game->m_Offsets->GetDefaultFOV.address), &dGetDefaultFOV);
 	hkGetFOV.createHook((LPVOID)(m_Game->m_Offsets->GetFOV.address), &dGetFOV);
 	hkGetViewModelFOV.createHook((LPVOID)(m_Game->m_Offsets->GetViewModelFOV.address), &dGetViewModelFOV);
-	
+
 	// Laser Pointer
 	GetPortalPlayer = (tGetPortalPlayer)m_Game->m_Offsets->GetPortalPlayer.address;
 	CreatePingPointer = (tCreatePingPointer)m_Game->m_Offsets->CreatePingPointer.address;
@@ -176,7 +176,7 @@ int Hooks::initSourceHooks()
 	GetOwner = (tGetOwner)m_Game->m_Offsets->GetOwner.address;
 
 	return 1;
-} 
+}
 
 bool __fastcall Hooks::dCHudCrosshair_ShouldDraw(void* ecx, void* edx) {
 	bool shouldDraw = hkCHudCrosshair_ShouldDraw.fOriginal(ecx);
@@ -251,14 +251,19 @@ void __fastcall Hooks::dRenderView(void *ecx, void *edx, CViewSetup &setup, CVie
 	Vector position = setup.origin;
 
 	if (m_VR->m_ApplyPortalRotationOffset) {
-		Vector vec = position - m_VR->m_SetupOrigin;
-		float distance = sqrt(vec.x * vec.x + vec.y * vec.y + vec.z * vec.z);
+		const Vector vec = position - m_VR->m_SetupOrigin;
+		const float distance = sqrt(vec.x * vec.x + vec.y * vec.y + vec.z * vec.z);
 
 		// Rudimentary portalling detection
-		if (distance > 35) {
-			//m_VR->m_RotationOffset.x += m_VR->m_PortalRotationOffset.x;
+		if (distance > m_VR->m_PortallingDetectionDistanceThreshold) {
 			m_VR->m_RotationOffset.y += m_VR->m_PortalRotationOffset.y;
-			//m_VR->m_RotationOffset.z += m_VR->m_PortalRotationOffset.z;
+
+			// If enabled, the camera pitch/roll follows the direction of the portal -- might be disorienting
+			// for some people:
+			if (m_VR->m_ApplyPitchAndRollPortalRotationOffset) {
+				m_VR->m_RotationOffset.x += m_VR->m_PortalRotationOffset.x;
+				m_VR->m_RotationOffset.z += m_VR->m_PortalRotationOffset.z;
+			}
 
 			m_VR->UpdateHMDAngles();
 
@@ -301,7 +306,7 @@ void __fastcall Hooks::dRenderView(void *ecx, void *edx, CViewSetup &setup, CVie
 	rndrContext->SetRenderTarget(m_VR->m_LeftEyeTexture);
 	rndrContext->Release();
 	hkRenderView.fOriginal(ecx, leftEyeView, hudViewSetup, nClearFlags, whatToDraw);
-	
+
 	// Right eye CViewSetup
 	tempAngle = QAngle(setup.angles.x, setup.angles.y, setup.angles.z);
 	rightEyeView.origin = m_VR->TraceEye((uint32_t*)localPlayer, position, m_VR->GetViewOriginRight(position), tempAngle);
@@ -441,7 +446,7 @@ float __fastcall Hooks::dProcessUsercmds(void *ecx, void *edx, edict_t *player, 
 		typedef Server_WeaponCSBase *(__thiscall *tGetActiveWep)(void *thisptr);
 		static tGetActiveWep oGetActiveWep = (tGetActiveWep)(m_Game->m_Offsets->GetActiveWeapon.address);
 		Server_WeaponCSBase *curWep = oGetActiveWep(pPlayer);
-		
+
 		if (curWep)
 		{
 			int wepID = curWep->GetWeaponID();
@@ -539,7 +544,7 @@ int Hooks::dReadUsercmd(void *buf, CUserCmd *move, CUserCmd *from)
 	return 1;
 }
 
-void __fastcall Hooks::dWriteUsercmdDeltaToBuffer(void *ecx, void *edx, int a1, void *buf, int from, int to, bool isnewcommand) 
+void __fastcall Hooks::dWriteUsercmdDeltaToBuffer(void *ecx, void *edx, int a1, void *buf, int from, int to, bool isnewcommand)
 {
 	return hkWriteUsercmdDeltaToBuffer.fOriginal(ecx, a1, buf, from, to, isnewcommand);
 }
@@ -603,7 +608,7 @@ void Hooks::dAdjustEngineViewport(int &x, int &y, int &width, int &height)
 void Hooks::dViewport(void *ecx, void *edx, int x, int y, int width, int height)
 {
 	//std::cout << "dViewport - X: " << x << ", Y: " << y << ", W: " << width << ", H: " << height << "\n";
-	
+
 
 	/*if (m_VR->m_IsVREnabled && m_Game->m_EngineClient->IsInGame() && !m_Game->m_VguiSurface->IsCursorVisible())
 	{
@@ -763,7 +768,7 @@ Vector* Hooks::dWeapon_ShootPosition(void* ecx, void* edx, Vector* eyePos)
 	auto vrPlayer = m_Game->m_PlayersVRInfo[index];
 
 	if (m_VR->m_IsVREnabled && localIndex == index) {
-		*result = m_VR->GetRightControllerAbsPos();	
+		*result = m_VR->GetRightControllerAbsPos();
 	}
 	else if (vrPlayer.isUsingVR)
 	{

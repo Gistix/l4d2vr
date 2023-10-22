@@ -9,13 +9,14 @@
 #include <sstream>
 #include <unordered_map>
 #include <string>
+#include <cmath>
 #include <filesystem>
 #include <thread>
 #include <type_traits>
 #include <algorithm>
 #include <d3d9_vr.h>
 
-VR::VR(Game *game) 
+VR::VR(Game *game)
 {
     m_Game = game;
 
@@ -24,7 +25,7 @@ VR::VR(Game *game)
     vr::HmdError error = vr::VRInitError_None;
     m_System = vr::VR_Init(&error, vr::VRApplication_Scene);
 
-    if (error != vr::VRInitError_None) 
+    if (error != vr::VRInitError_None)
     {
         snprintf(errorString, MAX_STR_LEN, "VR_Init failed: %s", vr::VR_GetVRInitErrorAsEnglishDescription(error));
         Game::errorMsg(errorString);
@@ -75,7 +76,7 @@ VR::VR(Game *game)
     std::thread configParser(&VR::WaitForConfigUpdate, this);
     configParser.detach();
 
-    while (!g_D3DVR9) 
+    while (!g_D3DVR9)
         Sleep(10);
 
     g_D3DVR9->GetBackBufferData(&m_VKBackBuffer);
@@ -103,14 +104,14 @@ VR::VR(Game *game)
     m_IsVREnabled = true;
 }
 
-int VR::SetActionManifest(const char *fileName) 
+int VR::SetActionManifest(const char *fileName)
 {
     char currentDir[MAX_STR_LEN];
     GetCurrentDirectory(MAX_STR_LEN, currentDir);
     char path[MAX_STR_LEN];
     sprintf_s(path, MAX_STR_LEN, "%s\\VR\\SteamVRActionManifest\\%s", currentDir, fileName);
 
-    if (m_Input->SetActionManifestPath(path) != vr::VRInputError_None) 
+    if (m_Input->SetActionManifestPath(path) != vr::VRInputError_None)
     {
         Game::errorMsg("SetActionManifestPath failed");
     }
@@ -183,7 +184,7 @@ void VR::Update()
     if (!m_IsInitialized || !m_Game->m_Initialized)
         return;
 
-    
+
 
     if (m_IsVREnabled && g_D3DVR9)
     {
@@ -200,7 +201,7 @@ void VR::Update()
 
             m_Game->m_CachedArmsModel = false;
             m_CreatedVRTextures = false; // Have to recreate textures otherwise some workshop maps won't render
-        } 
+        }
     }
 
     SubmitVRTextures();
@@ -230,16 +231,16 @@ void VR::CreateVRTextures()
 
     m_CreatingTextureID = Texture_LeftEye;
     m_LeftEyeTexture = m_Game->m_MaterialSystem->CreateNamedRenderTargetTextureEx("leftEye0", m_RenderWidth, m_RenderHeight, RT_SIZE_NO_CHANGE, m_Game->m_MaterialSystem->GetBackBufferFormat(), MATERIAL_RT_DEPTH_SEPARATE, TEXTUREFLAGS_NOMIP);
-    
+
     m_CreatingTextureID = Texture_RightEye;
     m_RightEyeTexture = m_Game->m_MaterialSystem->CreateNamedRenderTargetTextureEx("rightEye0", m_RenderWidth, m_RenderHeight, RT_SIZE_NO_CHANGE, m_Game->m_MaterialSystem->GetBackBufferFormat(), MATERIAL_RT_DEPTH_SEPARATE, TEXTUREFLAGS_NOMIP);
 
     m_CreatingTextureID = Texture_HUD;
     m_HUDTexture = m_Game->m_MaterialSystem->CreateNamedRenderTargetTextureEx("vrHUD", m_RenderWidth, m_RenderHeight, RT_SIZE_NO_CHANGE, m_Game->m_MaterialSystem->GetBackBufferFormat(), MATERIAL_RT_DEPTH_SHARED, TEXTUREFLAGS_NOMIP);
-    
+
     m_CreatingTextureID = Texture_Blank;
     m_BlankTexture = m_Game->m_MaterialSystem->CreateNamedRenderTargetTextureEx("blankTexture", 512, 512, RT_SIZE_NO_CHANGE, m_Game->m_MaterialSystem->GetBackBufferFormat(), MATERIAL_RT_DEPTH_SHARED, TEXTUREFLAGS_NOMIP);
-    
+
     m_CreatingTextureID = Texture_None;
 
     m_Game->m_MaterialSystem->EndRenderTargetAllocation();
@@ -305,7 +306,7 @@ void VR::SubmitVRTextures()
 
 void VR::GetPoseData(vr::TrackedDevicePose_t &poseRaw, TrackedDevicePoseData &poseOut)
 {
-    if (poseRaw.bPoseIsValid) 
+    if (poseRaw.bPoseIsValid)
     {
         vr::HmdMatrix34_t mat = poseRaw.mDeviceToAbsoluteTracking;
         Vector pos;
@@ -342,7 +343,7 @@ void VR::RepositionOverlays()
     int windowWidth, windowHeight;
     m_Game->m_MaterialSystem->GetRenderContext()->GetWindowSize(windowWidth, windowHeight);
 
-    vr::HmdMatrix34_t menuTransform = 
+    vr::HmdMatrix34_t menuTransform =
     {
         1.0f, 0.0f, 0.0f, 0.0f,
         0.0f, 1.0f, 0.0f, 1.0f,
@@ -405,7 +406,7 @@ void VR::RepositionOverlays()
     vr::VROverlay()->SetOverlayWidthInMeters(m_HUDHandle, m_HudSize);*/
 }
 
-void VR::GetPoses() 
+void VR::GetPoses()
 {
     vr::TrackedDevicePose_t hmdPose = m_Poses[vr::k_unTrackedDeviceIndex_Hmd];
 
@@ -423,13 +424,13 @@ void VR::GetPoses()
     GetPoseData(rightControllerPose, m_RightControllerPose);
 }
 
-void VR::UpdatePosesAndActions() 
+void VR::UpdatePosesAndActions()
 {
     vr::VRCompositor()->WaitGetPoses(m_Poses, vr::k_unMaxTrackedDeviceCount, NULL, 0);
     m_Input->UpdateActionState(&m_ActiveActionSet, sizeof(vr::VRActiveActionSet_t), 1);
 }
 
-void VR::GetViewParameters() 
+void VR::GetViewParameters()
 {
     vr::HmdMatrix34_t eyeToHeadLeft = m_System->GetEyeToHeadTransform(vr::Eye_Left);
     vr::HmdMatrix34_t eyeToHeadRight = m_System->GetEyeToHeadTransform(vr::Eye_Right);
@@ -446,7 +447,7 @@ bool VR::PressedDigitalAction(vr::VRActionHandle_t &actionHandle, bool checkIfAc
 {
     vr::InputDigitalActionData_t digitalActionData;
     vr::EVRInputError result = m_Input->GetDigitalActionData(actionHandle, &digitalActionData, sizeof(digitalActionData), vr::k_ulInvalidInputValueHandle);
-    
+
     if (result == vr::VRInputError_None)
     {
         if (checkIfActionChanged)
@@ -544,7 +545,7 @@ void VR::ProcessMenuInput()
     else
     {
         vr::VROverlay()->SetOverlayFlag(currentOverlay, vr::VROverlayFlags_MakeOverlaysInteractiveIfVisible, false);
-        
+
         if (PressedDigitalAction(m_MenuSelect, true))
         {
             INPUT input {};
@@ -654,6 +655,36 @@ void VR::ProcessInput()
         m_RotationOffset.y -= 360 * std::floor(m_RotationOffset.y / 360);
     }
 
+    // Re-align camera upright after portalling
+    if(m_RotationOffset.x != 0.f || m_RotationOffset.z != 0.f)
+    {
+        // Last valid yaw angle, in case we need to revert to it.
+        const float lastYaw = m_RotationOffset.y;
+
+        const QAngle targetRotation(0, lastYaw, 0);
+
+        const auto lerp = [](float a, float b, float f) -> float {
+            return a * (1.0 - f) + (b * f);
+        };
+
+        float lerpedPitch = lerp(m_RotationOffset.x, targetRotation.x, m_CameraUprightRecoverySpeed);
+        float lerpedYaw = lerp(m_RotationOffset.y, targetRotation.y, m_CameraUprightRecoverySpeed);
+        float lerpedRoll = lerp(m_RotationOffset.z, targetRotation.z, m_CameraUprightRecoverySpeed);
+
+        m_RotationOffset = QAngle(lerpedPitch, lerpedYaw, lerpedRoll);
+
+        if (abs(m_RotationOffset.x) < 0.0001)
+            m_RotationOffset.x = 0;
+        if (abs(m_RotationOffset.z) < 0.0001)
+            m_RotationOffset.z = 0;
+
+        // Just in case any calculation went awry, revert to an upright vector:
+        if (std::isnan(m_RotationOffset.x) || std::isnan(m_RotationOffset.y) || std::isnan(m_RotationOffset.z))
+        {
+            m_RotationOffset = QAngle(0.f, lastYaw, 0.f);
+        }
+    }
+
     if (PressedDigitalAction(m_ActionPrimaryAttack))
     {
         m_Game->ClientCmd_Unrestricted("+attack");
@@ -731,7 +762,7 @@ void VR::ProcessInput()
     {
         m_Game->ClientCmd_Unrestricted("impulse 201");
     }
-    
+
     /*bool isControllerVertical = m_RightControllerAngAbs.x > 60 || m_RightControllerAngAbs.x < -45;
     if ((PressedDigitalAction(m_ShowHUD) || PressedDigitalAction(m_Scoreboard) || isControllerVertical || m_HudAlwaysVisible)
         && m_RenderedHud)
@@ -813,7 +844,7 @@ vr::HmdMatrix34_t VR::GetControllerTipMatrix(vr::ETrackedControllerRole controll
     {
         char buffer[vr::k_unMaxPropertyStringSize];
 
-        m_System->GetStringTrackedDeviceProperty(vr::VRSystem()->GetTrackedDeviceIndexForControllerRole(controllerRole), vr::Prop_RenderModelName_String, 
+        m_System->GetStringTrackedDeviceProperty(vr::VRSystem()->GetTrackedDeviceIndexForControllerRole(controllerRole), vr::Prop_RenderModelName_String,
                                                  buffer, vr::k_unMaxPropertyStringSize);
 
         vr::RenderModel_ControllerMode_State_t controllerState = {0};
@@ -826,7 +857,7 @@ vr::HmdMatrix34_t VR::GetControllerTipMatrix(vr::ETrackedControllerRole controll
     }
 
     // Not a hand controller role or tip lookup failed, return identity
-    const vr::HmdMatrix34_t identity = 
+    const vr::HmdMatrix34_t identity =
     {
         1.0f, 0.0f, 0.0f, 0.0f,
         0.0f, 1.0f, 0.0f, 0.0f,
@@ -956,7 +987,7 @@ void VR::UpdateTracking()
 
     Vector hmdPosCorrected = hmdPosCentered;
     VectorPivotXY(hmdPosCorrected, { 0, 0, 0 }, m_RotationOffset.y);
-    
+
     UpdateHMDAngles();
 
     m_HmdPosRelative = hmdPosCorrected * m_VRScale;
@@ -1307,7 +1338,7 @@ Vector VR::TraceEye(uint32_t* localPlayer, Vector cameraPos, Vector eyePos, QAng
         //VMatrix matrix = *(VMatrix*)((uintptr_t)pPortal + 0x4C4);
         VMatrix matrix = pPortal->MatrixThisToLinked();
 
-   
+
         /*QAngle newAngle;
         m_Game->m_Hooks->UTIL_Portal_AngleTransform(matrix, eyeAngle, newAngle);*/
         eyeAngle = TransformAnglesToWorldSpace(eyeAngle, matrix.As3x4());
@@ -1406,8 +1437,8 @@ void VR::ParseConfigFile()
     // If the entry does not exist, or if the parsing fails, sets 'target' to
     // 'defaultValue'.
     const auto parseOrDefault = [&](const char* key, auto& target,
-                                    const auto& defaultValue) 
-    { 
+                                    const auto& defaultValue)
+    {
         target = parseConfigEntry(userConfig, *m_Game, key, defaultValue);
         std::cout << "Setting '" << key << "' to '" << target << "'\n";
     };
@@ -1437,6 +1468,9 @@ void VR::ParseConfigFile()
     parseOrDefault("AntiAliasing", m_AntiAliasing, 0);
     parseXYZOrDefaultZero("ViewmodelPosCustomOffset", m_ViewmodelPosCustomOffset);
     parseXYZOrDefaultZero("ViewmodelAngCustomOffset", m_ViewmodelAngCustomOffset);
+    parseOrDefault("PortallingDetectionDistanceThreshold", m_PortallingDetectionDistanceThreshold, 35);
+    parseOrDefault("ApplyPitchAndRollPortalRotationOffset", m_ApplyPitchAndRollPortalRotationOffset, false);
+    parseOrDefault("CameraUprightRecoverySpeed", m_CameraUprightRecoverySpeed, 0.2f);
 }
 
 void VR::WaitForConfigUpdate()
@@ -1450,7 +1484,7 @@ void VR::WaitForConfigUpdate()
     std::filesystem::file_time_type configLastModified;
     while (1)
     {
-        try 
+        try
         {
             // Windows only notifies of change within a directory, so extra check here for just config.txt
             auto configModifiedTime = std::filesystem::last_write_time("VR\\config.txt");
@@ -1458,7 +1492,7 @@ void VR::WaitForConfigUpdate()
             {
                 configLastModified = configModifiedTime;
                 ParseConfigFile();
-                
+
                 std::cout << "Successfully reloaded 'config.txt'\n";
             }
         }
@@ -1471,10 +1505,10 @@ void VR::WaitForConfigUpdate()
         {
             concatErrorMsg(
                 *m_Game, "'config.txt' not found. (", e.what(), ")");
-            
+
             return;
         }
-        
+
         FindNextChangeNotification(fileChangeHandle);
         WaitForSingleObject(fileChangeHandle, INFINITE);
         Sleep(100); // Sometimes the thread tries to read config.txt before it's finished writing

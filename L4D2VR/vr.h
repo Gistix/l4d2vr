@@ -11,7 +11,7 @@ class IDirect3DSurface9;
 class ITexture;
 
 
-struct TrackedDevicePoseData 
+struct TrackedDevicePoseData
 {
 	std::string TrackedDeviceName;
 	Vector TrackedDevicePos;
@@ -20,7 +20,7 @@ struct TrackedDevicePoseData
 	QAngle TrackedDeviceAngVel;
 };
 
-struct SharedTextureHolder 
+struct SharedTextureHolder
 {
 	vr::VRVulkanTextureData_t m_VulkanData;
 	vr::Texture_t m_VRTexture;
@@ -90,9 +90,9 @@ public:
 	float m_HeightOffset = 0.0;
 	bool m_RoomscaleActive = false;
 
-	Vector m_LeftControllerPosAbs;											
+	Vector m_LeftControllerPosAbs;
 	QAngle m_LeftControllerAngAbs;
-	Vector m_RightControllerPosRel;											
+	Vector m_RightControllerPosRel;
 	QAngle m_RightControllerAngAbs;
 
 	Vector m_ViewmodelPosOffset;
@@ -101,7 +101,11 @@ public:
 	Vector m_ViewmodelPosCustomOffset; // Custom (from config) viewmodel position offset applied on top of hardcoded ones
     QAngle m_ViewmodelAngCustomOffset; // Custom (from config) viewmodel angle offset applied on top of hardcoded ones
 
-	float m_Ipd;																	
+	float m_PortallingDetectionDistanceThreshold; // The distance threshold used to detect portalling
+	bool m_ApplyPitchAndRollPortalRotationOffset; // If `true`, the camera pitch/roll follows the exit portal's orientation when portalling
+    float m_CameraUprightRecoverySpeed; // If the above is `true`, this controls how quickly the camera turns back upright after portalling
+
+	float m_Ipd;
 	float m_EyeZ;
 
 	Vector m_IntendedPositionOffset = { 0,0,0 };
@@ -167,7 +171,7 @@ public:
 	vr::VRActionHandle_t m_MenuDown;
 	vr::VRActionHandle_t m_MenuLeft;
 	vr::VRActionHandle_t m_MenuRight;
-	vr::VRActionHandle_t m_Spray; 
+	vr::VRActionHandle_t m_Spray;
 	vr::VRActionHandle_t m_Scoreboard;
 	vr::VRActionHandle_t m_ShowHUD;
 	vr::VRActionHandle_t m_Pause;
